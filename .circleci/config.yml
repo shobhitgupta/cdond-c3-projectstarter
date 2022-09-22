@@ -2,8 +2,8 @@ version: 2.1
 
 parameters:
   image-tag:
-    type: 13.9.0
-    default: "latest"
+    type: string
+    default: "13.9.0"
 jobs:
   build-frontend:
     docker:
