@@ -1,9 +1,13 @@
 version: 2.1
 
+parameters:
+  image-tag:
+    type: 13.9.0
+    default: "latest"
 jobs:
   build-frontend:
     docker:
-      - image: cimg/node:13.9.0
+      - image: cimg/node:<< pipeline.parameters.image-tag >>
     steps:
       - checkout
       - restore_cache:
@@ -20,7 +24,7 @@ jobs:
 
   build-backend:
     docker:
-      - image: cimg/node:13.9.0
+      - image: cimg/node:<< pipeline.parameters.image-tag >>
     steps:
       - checkout
       - restore_cache:
@@ -34,9 +38,10 @@ jobs:
       - save_cache:
           paths: [backend/node_modules]
           key: backend-build
+
   test-frontend:
     docker:
-      - image: cimg/node:13.9.0
+      - image: cimg/node:<< pipeline.parameters.image-tag >>
     steps:
       - checkout
       - restore_cache:
@@ -50,7 +55,7 @@ jobs:
 
   test-backend:
     docker:
-      - image: cimg/node:13.9.0
+      - image: cimg/node:<< pipeline.parameters.image-tag >>
     steps:
       - checkout
       - restore_cache:
