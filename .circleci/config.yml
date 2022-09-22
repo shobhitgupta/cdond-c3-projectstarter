@@ -81,19 +81,19 @@ jobs:
             npm install
             npm audit --audit-level=critical
 
-    scan-backend:
-      docker:
-        - image: cimg/node:<< pipeline.parameters.image-tag >>
-        steps:
-          - checkout
-          - restore_cache:
-              keys: [ backend-build ]
-          - run:
-              name: Back-end vulnerability
-              command: |
-                cd backend
-                npm install
-                npm audit --audit-level=critical
+  scan-backend:
+    docker:
+      - image: cimg/node:<< pipeline.parameters.image-tag >>
+    steps:
+      - checkout
+      - restore_cache:
+          keys: [ backend-build ]
+      - run:
+          name: Back-end vulnerability
+          command: |
+            cd backend
+            npm install
+            npm audit --audit-level=critical
 workflows:
   default:
     jobs:
