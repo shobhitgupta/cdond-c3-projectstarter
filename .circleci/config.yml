@@ -109,7 +109,7 @@ jobs:
       - run:
           command: npm run deploy
       - slack/notify:
-          channel: ABCXYZ
+          channel: circleci-channel
           event: fail
           template: basic_fail_1
 workflows:
