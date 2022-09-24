@@ -5,7 +5,7 @@ Parameters:
   ID:
     Description: Unique identifier.
     Type: String
-    default : "frontend"
+    Default : frontend
 Resources:
   WebsiteBucket:
     Type: AWS::S3::Bucket
