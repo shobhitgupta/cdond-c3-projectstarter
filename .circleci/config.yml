@@ -4,7 +4,7 @@ commands:
   destroy-environment:
     description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
     parameters:
-      stack:
+      workflor_id:
         default: "test"
         type: string
     steps:
@@ -12,7 +12,8 @@ commands:
           name: Destroy environments
           when: on_fail
           command: |
-            aws cloudformation delete-stack --stack-name <<parameters.stack>>-${CIRCLE_WORKFLOW_ID:0:7}
+            aws cloudformation delete-stack --stack-name udapeople-frontend-<< parameters.workflow_id >>
+            aws cloudformation delete-stack --stack-name udapeople-backend-<< parameters.workflow_id >>
 
 orbs:
   node:  circleci/node@4.1
@@ -136,14 +137,14 @@ jobs:
       - checkout
       - run: yum -y install tar gzip
       - run: echo ${CIRCLE_WORKFLOW_ID:0:7}
-      # - run:
-      #     name: Ensure back-end infrastructure exists
-      #     command: |
-      #       aws cloudformation deploy \
-      #         --template-file .circleci/files/backend.yml \
-      #         --tags project=udapeople\
-      #         --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" 
-      #         --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}" 
+      - run:
+           name: Ensure back-end infrastructure exists
+           command: |
+             aws cloudformation deploy \
+               --template-file .circleci/files/backend.yml \
+               --tags project=udapeople\
+               --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" 
+               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
       - run:
           name: Ensure front-end infrastructure exist
           command: |
@@ -169,10 +170,10 @@ jobs:
 
 ######################################################################################
 
-configure-infrastructure:
-  docker:
-    - image: python:3.7-alpine3.11
-  steps:
+ configure-infrastructure:
+   docker:
+     - image: python:3.7-alpine3.11
+   steps:
     - checkout
     - add_ssh_keys:
        fingerprints: [ "47:08:da:cb:58:26:28:6b:01:dc:15:ad:e3:5a:cf:2a" ]
@@ -190,25 +191,133 @@ configure-infrastructure:
           ansible-playbook -i ~/project/.circleci/ansible/inventory.txt ~/project/.circleci/ansible/configure-server.yml
     # Here's where you will add some code to rollback on failure
 ####################################
+ run-migrations:
+     docker:
+       - image: circleci/node:13.8.0
+     steps:
+       - checkout
+       - run:
+           name: Run migrations
+           command: |
+             cd backend
+             npm install
+             npm run migrations > migrations_dump.txt
+       - run:
+           name: Send migration results to memstash
+           command: |
+             # Your code here
+             exit 1
+       # Here's where you will add some code to rollback on failure
+ deploy-frontend:
+       docker:
+         - image: amazon/aws-cli
+       steps:
+         - checkout
+         - run:
+             name: Install dependencies
+             command: |
+               yum install python3-pip -y
+               yum -y install curl -y
+               curl -sL https://rpm.nodesource.com/setup_10.x | bash -
+               yum install -y nodejs
+         - run:
+             name : retrieve backend url
+             command : |
+               export BACKEND_IP=$(aws ec2 describe-instances \
+               --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+               --query "Reservations[*].Instances[*].PublicIpAddress" \
+               --output text)
+               export API_URL="http://${BACKEND_IP}:3030"
+         - run :
+             name : deploy front end object
+             command : | 
+               cd frontend
+               npm install
+               npm run build
+               tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
+               aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
+ deploy-backend:
+      docker:
+          - image: python:3.7-alpine3.11
+      steps:
+           - checkout
+           - add_ssh_keys:
+               fingerprints: [ "47:08:da:cb:58:26:28:6b:01:dc:15:ad:e3:5a:cf:2a" ] # You can get this ID in the section where you registered the SSH Key
+           - attach_workspace:
+               at: ~/
+           - run:
+               name: Install dependencies
+               working_directory: ./.circleci/ansible
+               command: |
+                 apk add --update ansible
+                 apk add tar gzip
+                 apk add curl
+                 apk add gzip
+                 apk add nodejs
+                 apk add npm
+                 pip install awscli    
+ smoke-test:
+    docker:
+      - image: python:3.7-alpine3.11
+    steps:
+          - checkout
+          - run:
+              name: Install dependencies
+              command: |
+                apk add --update curl nodejs npm
+                apk add --update nodejs
+                apk add --update npm
+                pip install awscli
+          - run:
+              name: Get backend url
+              command: |
+                export API_URL="http://${BACKEND_IP}:3030"
+                echo "${API_URL}"
+          - run:
+              name: Backend smoke test.
+              command: |
+                if curl "${API_URL}/api/status" | grep "ok"
+                then
+                return 0
+                else
+                return 1
+                fi
+          - run:
+              name: Frontend smoke test.
+              command: |
+                URL="http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3-website-us-east-1.amazonaws.com/#/employees"            
+                echo ${URL}
+                if curl -s ${URL} | grep "Welcome"
+                then
+                return 1
+                else
+                return 1
+                fi
+          - destroy-environment:
+                workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
+
 workflows:
   default:
     jobs:
-      - deploy-infrastructure
-#      - build-frontend
-#      - build-backend
-#      - test-frontend:
-#          requires:
-#            - build-frontend
-#      - test-backend:
-#          requires:
-#            - build-backend
-#      - scan-frontend:
-#          requires:
-#            - build-frontend
-#      - scan-backend:
-#          requires:
-#            - build-backend
-#  deploy_and_notify:
-#    jobs:
-#      - deploy:
-#          context: slack-secrets
+            - build-frontend
+            - build-backend
+            - test-frontend:
+                requires: [ build-frontend ]
+            - test-backend:
+                requires: [ build-backend ]
+            - scan-backend:
+                requires: [ build-backend ]
+            - scan-frontend:
+                requires: [ build-frontend ]
+            - deploy-infrastructure:
+                requires: [ test-frontend, test-backend, scan-frontend, scan-backend ]
+            - configure-infrastructure:
+                requires: [ deploy-infrastructure ]
+            - run-migrations:
+                requires: [ configure-infrastructure ]
+            - deploy-frontend:
+                requires: [ run-migrations ]
+            - deploy-backend:
+                requires: [ deploy-frontend ]
+            - smoke-test:
+                requires: [ deploy-backend, deploy-frontend ]
