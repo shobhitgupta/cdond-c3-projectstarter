@@ -116,21 +116,10 @@ jobs:
             npm audit fix --audit-level=critical --force
             npm audit fix --force
             npm audit --audit-level=critical
-  deploy:
-    executor:
-      name: node/default
-    steps:
-      - checkout
-      - node/install-packages
-      - run:
-          command: npm run deploy
-      - slack/notify:
-          channel: circleci-channel
-          event: fail
-          template: basic_fail_1
+  
 
 ########################### Create Infrastructure ####################################
-  deploy-infrastructure:
+ deploy-infrastructure:
     docker:
       - image : amazon/aws-cli
     steps:
@@ -179,12 +168,10 @@ jobs:
        fingerprints: [ "47:08:da:cb:58:26:28:6b:01:dc:15:ad:e3:5a:cf:2a" ]
     - attach_workspace:
             at: ~/
-    # attach workspace
     - run:
         name: Install dependencies
         command: |
           apk add --update ansible \
-
     - run:
         name: Configure server
         command: |
