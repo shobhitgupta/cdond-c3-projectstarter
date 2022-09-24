@@ -119,7 +119,7 @@ jobs:
   
 
 ########################### Create Infrastructure ####################################
- deploy-infrastructure:
+  deploy-infrastructure:
     docker:
       - image : amazon/aws-cli
     steps:
@@ -159,7 +159,7 @@ jobs:
 
 ######################################################################################
 
- configure-infrastructure:
+  configure-infrastructure:
    docker:
      - image: python:3.7-alpine3.11
    steps:
@@ -178,7 +178,7 @@ jobs:
           ansible-playbook -i ~/project/.circleci/ansible/inventory.txt ~/project/.circleci/ansible/configure-server.yml
     # Here's where you will add some code to rollback on failure
 ####################################
- run-migrations:
+  run-migrations:
      docker:
        - image: circleci/node:13.8.0
      steps:
@@ -195,7 +195,7 @@ jobs:
              # Your code here
              exit 1
        # Here's where you will add some code to rollback on failure
- deploy-frontend:
+  deploy-frontend:
        docker:
          - image: amazon/aws-cli
        steps:
@@ -223,7 +223,7 @@ jobs:
                npm run build
                tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
                aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
- deploy-backend:
+  deploy-backend:
       docker:
           - image: python:3.7-alpine3.11
       steps:
@@ -243,7 +243,7 @@ jobs:
                  apk add nodejs
                  apk add npm
                  pip install awscli    
- smoke-test:
+  smoke-test:
     docker:
       - image: python:3.7-alpine3.11
     steps:
