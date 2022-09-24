@@ -112,25 +112,65 @@ jobs:
           channel: circleci-channel
           event: fail
           template: basic_fail_1
+
+#########################Backend Infra Setup##################################################
+deploy-infrastructure:
+  docker:
+   - image : amazon/aws-cli
+  steps:
+    - checkout
+    - yum -y install tar gzip
+    - run:
+        name: Ensure back-end infrastructure exists
+        command: |
+          aws cloudformation deploy \
+            --template-file .circleci/files/backend.yml \
+            --tags project=udapeople \
+            --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+            --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
+    - run:
+        name: Ensure front-end infrastructure exist
+        command: |
+          aws cloudformation deploy \
+            --template-file .circleci/files/frontend.yml \
+            --tags project=udapeople \
+            --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
+            --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}" 
+            exit 1
+    - run:
+        name: Add back-end ip to ansible inventory
+        command: |
+          aws ec2 describe-instances \
+          --query 'Reservations[*].Instances[*].PublicIpAddress' \
+          --filters "Name=tag:Project,Values=uda" \
+          --output text >> ~/.circleci/ansible/inventory.txt
+    - persist_to_workspace:
+        root: ~/
+        paths:
+          - project/.circleci/ansible/inventory.txt
+    # Here's where you will add some code to rollback on failure
+
+#########################################################################
 workflows:
   default:
     jobs:
-      - build-frontend
-      - build-backend
-      - test-frontend:
-          requires:
-            - build-frontend
-      - test-backend:
-          requires:
-            - build-backend
-      - scan-frontend:
-          requires:
-            - build-frontend
-      - scan-backend:
-          requires:
-            - build-backend
-      deploy_and_notify:
-        jobs:
-          - deploy:
-              context:
-                slack-secretsack: circleci/slack@4.10.1
+      -deploy-infrastructure
+#      - build-frontend
+#      - build-backend
+#      - test-frontend:
+#          requires:
+#            - build-frontend
+#      - test-backend:
+#          requires:
+#            - build-backend
+#      - scan-frontend:
+#          requires:
+#            - build-frontend
+#      - scan-backend:
+#          requires:
+#            - build-backend
+#      deploy_and_notify:
+#        jobs:
+#          - deploy:
+#              context:
+#                slack-secretsack: circleci/slack@4.10.1
