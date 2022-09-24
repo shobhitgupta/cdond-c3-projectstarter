@@ -63,7 +63,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [ frontend-build ]
+            keys: [ frontend-build ]
       - run:
           name: Front-end unit tests
           command: |
@@ -128,7 +128,7 @@ jobs:
           event: fail
           template: basic_fail_1
 
-  ########################### Create Infrastructure ####################################
+########################### Create Infrastructure ####################################
   deploy-infrastructure:
     docker:
       - image : amazon/aws-cli
@@ -136,30 +136,30 @@ jobs:
       - checkout
       - run: yum -y install tar gzip
       - run: echo ${CIRCLE_WORKFLOW_ID:0:7}
-      #      - run:
-      #          name: Ensure back-end infrastructure exists
-      #          command: |
-      #            aws cloudformation deploy \
-      #              --template-file .circleci/files/backend.yml \
-      #              --tags project=udapeople\
-      #              --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}"
-      #              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
+      # - run:
+      #     name: Ensure back-end infrastructure exists
+      #     command: |
+      #       aws cloudformation deploy \
+      #         --template-file .circleci/files/backend.yml \
+      #         --tags project=udapeople\
+      #         --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" 
+      #         --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}" 
       - run:
           name: Ensure front-end infrastructure exist
           command: |
             aws cloudformation deploy \
               --template-file .circleci/files/frontend.yml \
-              --tags project=udapeople \
+              --tags project=udapeople\
               --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" 
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  
-
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}" 
       - run:
           name: Add back-end ip to ansible inventory
           command: |
-            aws ec2 describe-instances \
-            --query 'Reservations[*].Instances[*].PublicIpAddress' \
-            --filters "Name=tag:Project,Values=udapeople" \
-            --output text >> .circleci/ansible/inventory.txt
+            BACKEND_IP=$(aws ec2 describe-instances \
+              --query "Reservations[*].Instances[*].PublicIpAddress" \
+              --output text)
+            echo "[web]" >> .circleci/ansible/inventory.txt              
+            echo "$BACKEND_IP" >> .circleci/ansible/inventory.txt              
             cat .circleci/ansible/inventory.txt
       - persist_to_workspace:
           root: ~/
@@ -175,9 +175,9 @@ configure-infrastructure:
   steps:
     - checkout
     - add_ssh_keys:
-        fingerprints: [ "47:08:da:cb:58:26:28:6b:01:dc:15:ad:e3:5a:cf:2a" ]
+       fingerprints: [ "47:08:da:cb:58:26:28:6b:01:dc:15:ad:e3:5a:cf:2a" ]
     - attach_workspace:
-        at: ~/
+            at: ~/
     # attach workspace
     - run:
         name: Install dependencies
