@@ -4,8 +4,9 @@
   user: ubuntu
   become: true
   gather_facts: false
-#  roles:
-#   -configure-server
+
+
+
 
   vars:
     - ansible_python_interpreter: /usr/bin/python3
@@ -32,6 +33,6 @@
     - TYPEORM_DATABASE: "{{ lookup('env', 'TYPEORM_DATABASE')}}"
     - TYPEORM_MIGRATIONS: "{{ lookup('env', 'TYPEORM_MIGRATIONS')}}"
     - TYPEORM_MIGRATIONS_DIR: "{{ lookup('env', 'TYPEORM_MIGRATIONS_DIR')}}"
-#
-#  roles:
-#   -configure-server
+
+  roles:
+  - { role: configure-server }
