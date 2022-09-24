@@ -160,7 +160,7 @@ jobs:
             aws ec2 describe-instances \
             --query 'Reservations[*].Instances[*].PublicIpAddress' \
             --filters "Name=tag:Project,Values=udapeople" \
-            --output text >> ~/.circleci/ansible/inventory.txt
+            --output text >> .circleci/ansible/inventory.txt
       - persist_to_workspace:
           root: ~/
           paths:
@@ -173,9 +173,9 @@ configure-infrastructure:
   docker:
     - image: python:3.7-alpine3.11
   steps:
-    -checkout
+    - checkout
     - add_ssh_keys:
-      fingerprints: [ "47:08:da:cb:58:26:28:6b:01:dc:15:ad:e3:5a:cf:2a" ]
+       fingerprints: [ "47:08:da:cb:58:26:28:6b:01:dc:15:ad:e3:5a:cf:2a" ]
     - attach_workspace:
             at: ~/
     # attach workspace
