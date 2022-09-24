@@ -13,7 +13,7 @@ commands:
           when: on_fail
           command: |
             aws cloudformation delete-stack --stack-name <<parameters.stack>>-${CIRCLE_WORKFLOW_ID:0:7}
-            exit 1
+
 orbs:
   node:  circleci/node@4.1
   slack: circleci/slack@4.1
@@ -161,6 +161,7 @@ jobs:
             --query 'Reservations[*].Instances[*].PublicIpAddress' \
             --filters "Name=tag:Project,Values=udapeople" \
             --output text >> .circleci/ansible/inventory.txt
+            cat .circleci/ansible/inventory.txt
       - persist_to_workspace:
           root: ~/
           paths:
@@ -183,13 +184,11 @@ configure-infrastructure:
         name: Install dependencies
         command: |
           apk add --update ansible \
-          
-          exit 1
+
     - run:
         name: Configure server
         command: |
-          # Your code here
-          exit 1
+          ansible-playbook -i ~/project/.circleci/ansible/inventory.txt ~/project/.circleci/ansible/configure-server.yml
     # Here's where you will add some code to rollback on failure
 ####################################
 workflows:
