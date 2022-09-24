@@ -112,6 +112,7 @@ jobs:
           command: |
             cd backend
             npm install
+            npm audit fix --audit-level=critical --force
             npm audit fix --force
             npm audit --audit-level=critical
   deploy:
@@ -167,6 +168,30 @@ jobs:
       # Here's where you will add some code to rollback on failure
 
 ######################################################################################
+
+configure-infrastructure:
+  docker:
+    - image: python:3.7-alpine3.11
+  steps:
+    -checkout
+    - add_ssh_keys:
+      fingerprints: [ "47:08:da:cb:58:26:28:6b:01:dc:15:ad:e3:5a:cf:2a" ]
+    - attach_workspace:
+            at: ~/
+    # attach workspace
+    - run:
+        name: Install dependencies
+        command: |
+          apk add --update ansible \
+          
+          exit 1
+    - run:
+        name: Configure server
+        command: |
+          # Your code here
+          exit 1
+    # Here's where you will add some code to rollback on failure
+####################################
 workflows:
   default:
     jobs:
