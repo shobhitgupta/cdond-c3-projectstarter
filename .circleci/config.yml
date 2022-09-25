@@ -212,14 +212,14 @@ jobs:
              name : retrieve backend url
              command : |
                export API_URL="http://54.160.185.74:3030"
-         - run :
-             name : deploy front end object
-             command : | 
+               echo "API_URL = ${API_URL}"
+               echo API_URL="http://${BACKEND_IP}:3030" >> frontend/.env
+               cat frontend/.env
                cd frontend
                npm install
                npm run build
                tar -czvf artifact-"6988826".tar.gz dist
-               aws s3 cp dist s3://udapeople-6988826--recursive
+               aws s3 cp dist s3://udapeople-6988826 --recursive
   deploy-backend:
       docker:
           - image: python:3.7-alpine3.11
