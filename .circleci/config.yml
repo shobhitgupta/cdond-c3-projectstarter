@@ -245,7 +245,7 @@ jobs:
           name : retrieve backend url
           command : |
             export BACKEND_IP=$(aws ec2 describe-instances \
-            --filters "Name=tag:Name,Values=backend-fbbb411" \
+            --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
             --query "Reservations[*].Instances[*].PublicIpAddress" \
             --output text)
             export API_URL="http://${BACKEND_IP}:3030"
@@ -255,10 +255,8 @@ jobs:
             cd frontend
             npm install
             npm run build
-            tar -czvf artifact-fbbb411.tar.gz dist 
-            aws s3 cp dist s3://udapeople-fbbb411
-      - destroy-environment:
-          workflow_id: fbbb411
+            tar -czvf artifact-${CIRCLE_WORKFLOW_ID:0:7}.tar.gz dist 
+            aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
 
   deploy-backend:
     docker:
@@ -270,9 +268,13 @@ jobs:
       - attach_workspace:
           at: ~/
       - run:
-          name: Install npm
+          name: install tar zip
           command: |
-            apk add --update npm
+            apk add tar gzip npm nodejs curl
+      - run:
+          name: install ansible
+          command: |
+            apk add --update ansible
       - run:
           name: deploy backend objects
           command: |
@@ -294,18 +296,20 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Install dependencies
+         name: Install dependencies
+         command: |
+          apk add curl tar gzip
+      - run:
+          name: install aws cli
           command: |
-            apk add --update curl nodejs npm
-            apk add --update nodejs
-            apk add --update npm
-            pip install awscli
+                apk add --no-cache aws-cli
       - run:
           name: Get backend url
           command: |
-            BACKEND_IP=$(aws ec2 describe-instances \
-            --query "Reservations[*].Instances[*].PublicIpAddress" \
-            --output text)
+            export BACKEND_IP=$(aws --region us-east-1 ec2 describe-instances \
+                   --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+                   --query 'Reservations[*].Instances[*].[PublicIpAddress]' \
+                   --output text)
             echo "http://${BACKEND_IP}:3030/api/status"
             curl "http://${BACKEND_IP}:3030/api/status"
             if curl "http://${BACKEND_IP}:3030/api/status" | grep "ok"
@@ -340,16 +344,15 @@ workflows:
       #                requires: [ build-backend ]
       #          - scan-frontend:
       #                requires: [ build-frontend ]
-#      - deploy-infrastructure
-#      - configure-infrastructure:
-#          requires: [ deploy-infrastructure ]
+      - deploy-infrastructure
+      - configure-infrastructure:
+          requires: [ deploy-infrastructure ]
 #      - run-migrations:
 #          requires: [ configure-infrastructure ]
       - deploy-frontend
       - deploy-backend
-
-#          - smoke-test:
-#                requires: [ deploy-backend, deploy-frontend ]
+      - smoke-test:
+           requires: [ deploy-backend, deploy-frontend ]
 #          - cloudfront-update:
 #                requires: [ smoke-test ]
 #          - cleanup:
