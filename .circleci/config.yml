@@ -195,7 +195,6 @@ jobs:
       - image: circleci/node:13.8.0
     steps:
       - checkout
-      - install-dependencies
       - restore_cache:
             keys: [ backend-build ]
       - run:
@@ -213,7 +212,6 @@ jobs:
          - image: circleci/node:12.0.0
        steps:
          - checkout
-         - install-dependencies
          - attach_workspace:
              at: ~/
          - run:
@@ -240,7 +238,6 @@ jobs:
         - image: python:3.7-alpine3.11
       steps:
            - checkout
-           - install-dependencies
            - add_ssh_keys:
                fingerprints: [ "47:08:da:cb:58:26:28:6b:01:dc:15:ad:e3:5a:cf:2a" ] # You can get this ID in the section where you registered the SSH Key
            - attach_workspace:
