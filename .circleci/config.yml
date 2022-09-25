@@ -211,15 +211,19 @@ jobs:
          - run:
              name : retrieve backend url
              command : |
-               export API_URL="http://54.160.185.74:3030"
-               echo "API_URL = ${API_URL}"
-               echo API_URL="http://54.169.185.74:3030" >> frontend/.env
-               cat frontend/.env
-               cd frontend
-               npm install
-               npm run build
-               tar -czvf artifact-"6988826".tar.gz dist
-               aws s3 cp dist s3://udapeople-6988826 --recursive
+               export BACKEND_IP=$(aws ec2 describe-instances \
+               --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+               --query "Reservations[*].Instances[*].PublicIpAddress" \
+               --output text)
+             export API_URL="http://${BACKEND_IP}:3030"
+             echo "API_URL = ${API_URL}"
+             echo API_URL="http://${BACKEND_IP}:3030" >> frontend/.env
+             cat frontend/.env
+             cd frontend
+             npm install
+             npm run build
+             tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
+             aws s3 sync dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7}
   deploy-backend:
       docker:
           - image: python:3.7-alpine3.11
@@ -296,25 +300,13 @@ jobs:
 workflows:
   default:
     jobs:
-            # - build-frontend
-            # - build-backend
-            # - test-frontend:
-            #     requires: [ build-frontend ]
-            # - test-backend:
-            #     requires: [ build-backend ]
-            # - scan-backend:
-            #     requires: [ build-backend ]
-            # - scan-frontend:
-            #     requires: [ build-frontend ]
-            # - deploy-infrastructure
-               #requires: [ test-frontend, test-backend, scan-frontend, scan-backend ]
-             #- configure-infrastructure
-               # requires: [ deploy-infrastructure ]
-             #- run-migrations
-            #     #requires: [ configure-infrastructure ]
-#             - deploy-frontend
-#                # requires: [ run-migrations ]
-#             - deploy-backend:
-#                 requires: [ deploy-frontend ]
-             - smoke-test
-               # requires: [ deploy-backend, deploy-frontend ]
+             - build-frontend
+             - build-backend
+             - test-frontend:
+                 requires: [ build-frontend ]
+             - test-backend:
+                 requires: [ build-backend ]
+             - scan-backend:
+                 requires: [ build-backend ]
+             - scan-frontend:
+                 requires: [ build-frontend ]
