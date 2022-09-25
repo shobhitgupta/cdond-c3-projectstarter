@@ -9,9 +9,9 @@ commands:
           command: |
             yum install tar -y
             yum install gzip -y
-            apt-get -y -qq update
-            apt-get -y -qq install python3
-            apt-get -qq install awscli
+            sudo apt-get -y -qq update
+            sudo apt-get -y -qq install python3
+            sudo apt-get -qq install awscli
 
   destroy-environment:
     description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
