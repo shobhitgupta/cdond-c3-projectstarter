@@ -213,7 +213,7 @@ jobs:
              command : |
                export API_URL="http://54.160.185.74:3030"
                echo "API_URL = ${API_URL}"
-               echo API_URL="http://${BACKEND_IP}:3030" >> frontend/.env
+               echo API_URL="http://54.169.185.74:3030" >> frontend/.env
                cat frontend/.env
                cd frontend
                npm install
