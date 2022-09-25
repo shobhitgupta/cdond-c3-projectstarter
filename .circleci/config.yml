@@ -132,8 +132,6 @@ jobs:
          - image: amazon/aws-cli
        steps:
          - checkout
-         - attach_workspace:
-               at: ~/
          - run:
              name: Install dependencies
              command: |
@@ -142,6 +140,8 @@ jobs:
                yum -y install curl -y
                curl -sL https://rpm.nodesource.com/setup_10.x | bash -
                yum install -y nodejs
+         - attach_workspace:
+             at: ~/
          - run:
              name : retrieve backend url
              command : |
@@ -235,12 +235,11 @@ workflows:
     jobs:
 ##            - deploy-infrastructure
            - configure-infrastructure
-
-#            - run-migrations:
-#               requires: [ configure-infrastructure ]
-           - deploy-frontend:
+           - run-migrations:
                requires: [ configure-infrastructure ]
-           - deploy-backend:
-                requires: [ deploy-frontend ]
-#            - smoke-test:
+#           - deploy-frontend:
+#               requires: [ configure-infrastructure ]
+#           - deploy-backend:
+#                requires: [ deploy-frontend ]
+##            - smoke-test:
 #               requires: [ deploy-backend, deploy-frontend ]
