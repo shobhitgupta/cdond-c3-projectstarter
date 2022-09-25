@@ -25,99 +25,6 @@ parameters:
     type: string
     default: "13.9.0"
 jobs:
-  build-frontend:
-    docker:
-      - image: cimg/node:<< pipeline.parameters.image-tag >>
-    steps:
-      - checkout
-      - restore_cache:
-          keys: [frontend-build]
-      - run:
-          name: Build front-end
-          command: |
-            cd frontend
-            npm install
-            npm run build
-      - save_cache:
-          paths: [frontend/node_modules]
-          key: frontend-build
-
-  build-backend:
-    docker:
-      - image: cimg/node:<< pipeline.parameters.image-tag >>
-    steps:
-      - checkout
-      - restore_cache:
-          keys: [backend-build]
-      - run:
-          name: Back-end build
-          command: |
-            cd backend
-            npm install
-            npm run build
-      - save_cache:
-          paths: [backend/node_modules]
-          key: backend-build
-
-  test-frontend:
-    docker:
-      - image: cimg/node:<< pipeline.parameters.image-tag >>
-    steps:
-      - checkout
-      - restore_cache:
-            keys: [ frontend-build ]
-      - run:
-          name: Front-end unit tests
-          command: |
-            cd frontend
-            npm install
-            npm run test
-
-  test-backend:
-    docker:
-      - image: cimg/node:<< pipeline.parameters.image-tag >>
-    steps:
-      - checkout
-      - restore_cache:
-          keys: [ backend-build ]
-      - run:
-          name: Back-end unit tests
-          command: |
-            cd backend
-            npm install
-            npm run test
-
-  scan-frontend:
-    docker:
-      - image: cimg/node:<< pipeline.parameters.image-tag >>
-    steps:
-      - checkout
-      - restore_cache:
-          keys: [ frontend-build ]
-      - run:
-          name: Front-end vulnerability
-          command: |
-            cd frontend
-            npm install
-            npm audit fix --audit-level=critical --force
-            npm audit --audit-level=critical
-
-  scan-backend:
-    docker:
-      - image: cimg/node:<< pipeline.parameters.image-tag >>
-    steps:
-      - checkout
-      - restore_cache:
-          keys: [ backend-build ]
-      - run:
-          name: Back-end vulnerability
-          command: |
-            cd backend
-            npm install
-            npm audit fix --audit-level=critical --force
-            npm audit fix --force
-            npm audit --audit-level=critical
-  
 
 ########################### Create Infrastructure ####################################
   deploy-infrastructure:
@@ -155,7 +62,10 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
-      # Here's where you will add some code to rollback on failure
+      - destroy-environment:
+          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
+
+
 
 ######################################################################################
 
@@ -176,7 +86,8 @@ jobs:
         name: Configure server
         command: |
           ansible-playbook -i ~/project/.circleci/ansible/inventory.txt ~/project/.circleci/ansible/configure-server.yml
-    # Here's where you will add some code to rollback on failure
+    - destroy-environment:
+        workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
 ####################################
   run-migrations:
      docker:
@@ -189,12 +100,9 @@ jobs:
              cd backend
              npm install
              npm run migrations > migrations_dump.txt
-#       - run:
-#           name: Send migration results to memstash
-#           command: |
-#             # Your code here
-#             exit 1
-       # Here's where you will add some code to rollback on failure
+             cat migrations_dump.txt
+       - destroy-environment:
+           workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
   deploy-frontend:
        docker:
          - image: amazon/aws-cli
@@ -211,15 +119,19 @@ jobs:
          - run:
              name : retrieve backend url
              command : |
-               export API_URL="http://54.160.185.74:3030"
+               export BACKEND_IP=$(aws ec2 describe-instances \
+               --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+               --query "Reservations[*].Instances[*].PublicIpAddress" \
+               --output text)
+               export API_URL="http://${BACKEND_IP}:3030"
                echo "API_URL = ${API_URL}"
-               echo API_URL="http://54.169.185.74:3030" >> frontend/.env
+               echo API_URL="http://${BACKEND_IP}:3030" >> frontend/.env
                cat frontend/.env
                cd frontend
                npm install
                npm run build
-               tar -czvf artifact-"6988826".tar.gz dist
-               aws s3 cp dist s3://udapeople-6988826 --recursive
+               tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
+               aws s3 sync dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7}
   deploy-backend:
       docker:
           - image: python:3.7-alpine3.11
@@ -241,7 +153,7 @@ jobs:
                  apk add npm
                  pip install awscli
            - run:
-               name: deploy copy
+               name: deploy backend objects
                command: |
                  cd backend
                  npm i
@@ -268,53 +180,43 @@ jobs:
           - run:
               name: Get backend url
               command: |
-                export API_URL="http://54.169.185.74:3030"
-                echo "${API_URL}"
-          - run:
-              name: Backend smoke test.
-              command: |
-                if curl "${API_URL}/api/status" | grep "ok"
-                then
-                return 0
-                else
-                return 1
-                fi
+                BACKEND_IP=$(aws ec2 describe-instances \
+              --query "Reservations[*].Instances[*].PublicIpAddress" \
+              --output text)
+            echo "http://${BACKEND_IP}:3030/api/status"
+            curl "http://${BACKEND_IP}:3030/api/status"
+            if curl "http://${BACKEND_IP}:3030/api/status" | grep "ok"
+            then
+            return 0
+            else
+            return 1
+            fi
           - run:
               name: Frontend smoke test.
               command: |
-                URL="http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3-website-us-east-1.amazonaws.com/#/employees"            
-                echo ${URL}
-                if curl -s ${URL} | grep "Welcome"
-                then
-                return 1
-                else
-                return 1
-                fi
+                name: Frontend smoke test.
+          command: |
+            URL="http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3-website-us-east-1.amazonaws.com"
+            if curl -s ${URL} | grep "Welcome"
+            then
+            return 1
+            else
+            return 1
+            fi
           - destroy-environment:
                 workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
 
 workflows:
   default:
     jobs:
-            # - build-frontend
-            # - build-backend
-            # - test-frontend:
-            #     requires: [ build-frontend ]
-            # - test-backend:
-            #     requires: [ build-backend ]
-            # - scan-backend:
-            #     requires: [ build-backend ]
-            # - scan-frontend:
-            #     requires: [ build-frontend ]
-            # - deploy-infrastructure
-               #requires: [ test-frontend, test-backend, scan-frontend, scan-backend ]
-             #- configure-infrastructure
-               # requires: [ deploy-infrastructure ]
-             #- run-migrations
-            #     #requires: [ configure-infrastructure ]
-#             - deploy-frontend
-#                # requires: [ run-migrations ]
-#             - deploy-backend:
-#                 requires: [ deploy-frontend ]
+            - deploy-infrastructure
+            - configure-infrastructure :
+               requires: [ deploy-infrastructure ]
+            - run-migrations
+             requires: [ configure-infrastructure ]
+             - deploy-frontend
+                requires: [ run-migrations ]
+             - deploy-backend:
+                requires: [ deploy-frontend ]
              - smoke-test
-               # requires: [ deploy-backend, deploy-frontend ]
+               requires: [ deploy-backend, deploy-frontend ]
