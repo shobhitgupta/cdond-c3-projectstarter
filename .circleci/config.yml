@@ -166,7 +166,7 @@ jobs:
 
   configure-infrastructure:
    docker:
-     - image: python:3.7-alpine3.11
+     - image: amazon/aws-cli
    steps:
     - checkout
     - add_ssh_keys:
@@ -190,7 +190,7 @@ jobs:
 ####################################
   run-migrations:
     docker:
-      - image: circleci/node:13.8.0
+      - image: amazon/aws-cli
     steps:
       - checkout
       - restore_cache:
@@ -245,7 +245,7 @@ jobs:
 
   deploy-backend:
       docker:
-          - image: python:3.7-alpine3.11
+          - image: amazon/aws-cli
       steps:
            - checkout
            - run:
@@ -277,7 +277,7 @@ jobs:
                workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
   smoke-test:
     docker:
-      - image: python:3.7-alpine3.11
+      - image: amazon/aws-cli
     steps:
           - checkout
           - run:
