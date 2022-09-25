@@ -9,6 +9,14 @@ commands:
         type: string
     steps:
       - run:
+            name: awscli install
+            command: |
+              yum install tar -y
+              yum install gzip -y
+              sudo apt-get -y -qq update
+              sudo apt-get -y -qq install python3
+              sudo apt-get -qq install awscli
+      - run:
           name: Destroy environments
           when: on_fail
           command: |
@@ -164,7 +172,7 @@ jobs:
 
   configure-infrastructure:
    docker:
-     - image: amazon/aws-cli
+     - image: python:3.7-alpine3.11
    steps:
     - checkout
     - add_ssh_keys:
@@ -188,7 +196,7 @@ jobs:
 ####################################
   run-migrations:
     docker:
-      - image: amazon/aws-cli
+      - image: circleci/node:13.8.0
     steps:
       - checkout
       - restore_cache:
