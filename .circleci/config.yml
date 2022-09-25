@@ -169,12 +169,12 @@ jobs:
     - checkout
     - add_ssh_keys:
        fingerprints: [ "47:08:da:cb:58:26:28:6b:01:dc:15:ad:e3:5a:cf:2a" ]
-    - attach_workspace:
-            at: ~/
     - run:
         name: Install dependencies
         command: |
-          apk add --update ansible \
+          apk add --update ansible 
+          yum install tar -y
+          yum install gzip -y
     - attach_workspace:
         at: ~/
     - run:
@@ -196,6 +196,8 @@ jobs:
       - run:
           name: awscli install
           command: |
+            yum install tar -y
+            yum install gzip -y
             sudo apt-get -y -qq update
             sudo apt-get -y -qq install python3
             sudo apt-get -qq install awscli
