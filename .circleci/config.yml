@@ -1,6 +1,18 @@
 version: 2.1
 
 commands:
+  install-dependencies:
+    description: install required dependencies on dockers
+    steps:
+      - run:
+          name: python and aws cli
+          command: |
+            yum install tar -y
+            yum install gzip -y
+            apt-get -y -qq update
+            apt-get -y -qq install python3
+            apt-get -qq install awscli
+
   destroy-environment:
     description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
     parameters:
@@ -28,43 +40,7 @@ parameters:
 jobs:
 
 ########################### Create Infrastructure ####################################
-  deploy-infrastructure:
-    docker:
-      - image : amazon/aws-cli
-    steps:
-      - checkout
-      - run: yum -y install tar gzip
-      - run: echo ${CIRCLE_WORKFLOW_ID:0:7}
-      - run:
-          name: Ensure front-end infrastructure exist
-          command: |
-                aws cloudformation deploy \
-                  --template-file .circleci/files/frontend.yml \
-                  --tags project=udapeople-frontend \
-                  --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
-                  --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
-      - run:
-          name: Ensure back-end infrastructure exists
-          command: |
-            aws cloudformation deploy \
-              --template-file .circleci/files/backend.yml \
-              --tags project=udapeople-backend \
-              --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
-      - run:
-          name: Add back-end ip to ansible inventory
-          command: |
-            BACKEND_IP=$(aws ec2 describe-instances \
-              --query "Reservations[*].Instances[*].PublicIpAddress" \
-              --output text)            
-            echo "$BACKEND_IP" >> .circleci/ansible/inventory.txt              
-            cat .circleci/ansible/inventory.txt
-      - persist_to_workspace:
-          root: ~/
-          paths:
-            - project/.circleci/ansible/inventory.txt
-      - destroy-environment:
-          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
+
 
   build-frontend:
     docker:
@@ -162,19 +138,51 @@ jobs:
     
 
     ######################################################################################
-
+  deploy-infrastructure:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - install-dependencies
+      - run: echo ${CIRCLE_WORKFLOW_ID:0:7}
+      - run:
+          name: Ensure front-end infrastructure exist
+          command: |
+            aws cloudformation deploy \
+              --template-file .circleci/files/frontend.yml \
+              --tags project=udapeople-frontend \
+              --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
+      - run:
+          name: Ensure back-end infrastructure exists
+          command: |
+            aws cloudformation deploy \
+              --template-file .circleci/files/backend.yml \
+              --tags project=udapeople-backend \
+              --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
+      - run:
+          name: Add back-end ip to ansible inventory
+          command: |
+            BACKEND_IP=$(aws ec2 describe-instances \
+              --query "Reservations[*].Instances[*].PublicIpAddress" \
+              --output text)            
+            echo "$BACKEND_IP" >> .circleci/ansible/inventory.txt              
+            cat .circleci/ansible/inventory.txt
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - project/.circleci/ansible/inventory.txt
+      - destroy-environment:
+          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
   configure-infrastructure:
    docker:
      - image: python:3.7-alpine3.11
    steps:
     - checkout
+    - install-dependencies
     - add_ssh_keys:
        fingerprints: [ "47:08:da:cb:58:26:28:6b:01:dc:15:ad:e3:5a:cf:2a" ]
-    - run:
-        name: Install dependencies
-        command: |
-          yum install tar -y
-          yum install gzip -y
     - attach_workspace:
         at: ~/
     - run:
@@ -191,17 +199,9 @@ jobs:
       - image: circleci/node:13.8.0
     steps:
       - checkout
+      - install-dependencies
       - restore_cache:
             keys: [ backend-build ]
-      - run:
-          name: awscli install
-          command: |
-            yum install tar -y
-            yum install gzip -y
-            sudo apt-get -y -qq update
-            sudo apt-get -y -qq install python3
-            sudo apt-get -qq install awscli
-
       - run:
           name: Run migrations
           command: |
@@ -217,11 +217,7 @@ jobs:
          - image: circleci/node:12.0.0
        steps:
          - checkout
-         - run:
-             name: Install dependencies
-             command: |
-               sudo apt update
-               sudo apt install awscli -y
+         - install-dependencies
          - attach_workspace:
              at: ~/
          - run:
@@ -245,13 +241,10 @@ jobs:
 
   deploy-backend:
       docker:
-          - image: amazon/aws-cli
+        - image: python:3.7-alpine3.11
       steps:
            - checkout
-           - run:
-                 name: Install ansible
-                 command: |
-                   apk add --update ansible
+           - install-dependencies
            - add_ssh_keys:
                fingerprints: [ "47:08:da:cb:58:26:28:6b:01:dc:15:ad:e3:5a:cf:2a" ] # You can get this ID in the section where you registered the SSH Key
            - attach_workspace:
