@@ -226,7 +226,6 @@ jobs:
           command: |
             cd backend
             npm install
-            cat .env
             npm run migrations >> migrations_dump.txt
             cat ~/project/backend/migrations_dump.txt
   deploy-frontend:
