@@ -335,7 +335,7 @@ jobs:
           command: |
                 apk add --no-cache aws-cli
       - run:
-          name: Get backend url
+          name: Get backend url and backend smoke test
           command: |
             if curl "http://54.87.55.120:3030/api/status" | grep "ok"
             then
@@ -419,9 +419,9 @@ workflows:
 #          requires: [ run-migrations ]
 #      - deploy-backend:
 #                requires: [ run-migrations ]
-       - smoke-test
+       #- smoke-test
 #          requires: [deploy-backend, deploy-frontend]
-#      - cloudfront-update:
+        - cloudfront-update
 #                requires: [ smoke-test ]
 #      - cleanup:
 #                requires: [ cloudfront-update ]
