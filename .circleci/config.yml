@@ -418,7 +418,6 @@ workflows:
             branches:
               only:
                 -master
-          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
       - configure-infrastructure:
           requires: [ deploy-infrastructure ]
       - run-migrations:
@@ -427,9 +426,9 @@ workflows:
           requires: [ run-migrations ]
       - deploy-backend:
                 requires: [ run-migrations ]
-        - smoke-test:
+      - smoke-test:
           requires: [deploy-backend, deploy-frontend]
-        - cloudfront-update:
+      - cloudfront-update:
                requires: [ smoke-test ]
-        - cleanup:
+      - cleanup:
               requires: [ cloudfront-update ]
