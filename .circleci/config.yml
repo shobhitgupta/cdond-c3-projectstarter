@@ -116,7 +116,6 @@ jobs:
           command: |
             cd frontend
             npm install
-            npm audit fix --audit-level=critical --force
             npm audit --audit-level=critical
 
   scan-backend:
@@ -131,8 +130,6 @@ jobs:
           command: |
             cd backend
             npm install
-            npm audit fix --audit-level=critical --force
-            npm audit fix --force
             npm audit --audit-level=critical
     
     
@@ -413,23 +410,23 @@ workflows:
           requires: [ build-backend ]
       - scan-frontend:
           requires: [ build-frontend ]
-      - deploy-infrastructure:
-          filters:
-            branches:
-              only:
-                -master
-          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
-      - configure-infrastructure:
-          requires: [ deploy-infrastructure ]
-      - run-migrations:
-            requires: [ configure-infrastructure ]
-      - deploy-frontend:
-          requires: [ run-migrations ]
-      - deploy-backend:
-                requires: [ run-migrations ]
-        - smoke-test:
-          requires: [deploy-backend, deploy-frontend]
-        - cloudfront-update:
-               requires: [ smoke-test ]
-        - cleanup:
-              requires: [ cloudfront-update ]
+#      - deploy-infrastructure:
+#          filters:
+#            branches:
+#              only:
+#                -master
+#          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+#      - configure-infrastructure:
+#          requires: [ deploy-infrastructure ]
+#      - run-migrations:
+#            requires: [ configure-infrastructure ]
+#      - deploy-frontend:
+#          requires: [ run-migrations ]
+#      - deploy-backend:
+#                requires: [ run-migrations ]
+#        - smoke-test:
+#          requires: [deploy-backend, deploy-frontend]
+#        - cloudfront-update:
+#               requires: [ smoke-test ]
+#        - cleanup:
+#              requires: [ cloudfront-update ]
