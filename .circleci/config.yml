@@ -116,6 +116,7 @@ jobs:
           command: |
             cd frontend
             npm install
+            npm audit fix --audit-level=critical --force
             npm audit --audit-level=critical
 
   scan-backend:
@@ -130,7 +131,9 @@ jobs:
           command: |
             cd backend
             npm install
+            npm audit fix --audit-level=critical --force
             npm audit --audit-level=critical
+    
     
     
 
@@ -331,7 +334,7 @@ jobs:
           command: |
                 apk add --no-cache aws-cli
       - run:
-          name: Get backend url and backend smoke test
+          name: Run backend smoke test
           command: |
             sleep 60
             export BACKEND_IP=$(aws ec2 describe-instances --query 'Reservations[*].Instances[*].PublicIpAddress' --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" --output text)
@@ -340,7 +343,7 @@ jobs:
             echo "API_URL=${API_URL}"
             if curl "http://{API_URL}/api/status" | grep "ok"
             then
-            return 0
+            return 1
             else
             return 1
             fi
@@ -354,9 +357,9 @@ jobs:
             else
             return 1
             fi
-      - destroy-environment:
-          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
-      - revert-migrations
+#      - destroy-environment:
+#          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
+#      - revert-migrations
   cloudfront-update:
     docker:
       - image: amazon/aws-cli
@@ -400,33 +403,33 @@ jobs:
 workflows:
   default:
     jobs:
-      - build-frontend
-      - build-backend
-      - test-frontend:
-          requires: [ build-frontend ]
-      - test-backend:
-          requires: [ build-backend ]
-      - scan-backend:
-          requires: [ build-backend ]
-      - scan-frontend:
-          requires: [ build-frontend ]
-#      - deploy-infrastructure:
-#          filters:
-#            branches:
-#              only:
-#                -master
-#          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
-#      - configure-infrastructure:
-#          requires: [ deploy-infrastructure ]
-#      - run-migrations:
-#            requires: [ configure-infrastructure ]
-#      - deploy-frontend:
-#          requires: [ run-migrations ]
-#      - deploy-backend:
-#                requires: [ run-migrations ]
-#        - smoke-test:
-#          requires: [deploy-backend, deploy-frontend]
-#        - cloudfront-update:
-#               requires: [ smoke-test ]
-#        - cleanup:
-#              requires: [ cloudfront-update ]
+#      - build-frontend
+#      - build-backend
+#      - test-frontend:
+#          requires: [ build-frontend ]
+#      - test-backend:
+#          requires: [ build-backend ]
+#      - scan-backend:
+#          requires: [ build-backend ]
+#      - scan-frontend:
+#          requires: [ build-frontend ]
+      - deploy-infrastructure:
+          filters:
+            branches:
+              only:
+                -master
+          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+      - configure-infrastructure:
+          requires: [ deploy-infrastructure ]
+      - run-migrations:
+            requires: [ configure-infrastructure ]
+      - deploy-frontend:
+          requires: [ run-migrations ]
+      - deploy-backend:
+                requires: [ run-migrations ]
+        - smoke-test:
+          requires: [deploy-backend, deploy-frontend]
+        - cloudfront-update:
+               requires: [ smoke-test ]
+        - cleanup:
+              requires: [ cloudfront-update ]
