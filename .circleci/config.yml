@@ -248,9 +248,13 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            sudo apt-get -y -qq update
-            sudo apt-get -qq install awscli
-            sudo apt install tar gzip curl
+            sudo apt update && sudo apt upgrade
+            sudo apt-get install python python-pip 
+            sudo pip install awscli 
+            python -m pip install --user ansible
+            npm install
+            sudo apt-get install curl
+            sudo apt-get install tar gzip
       - attach_workspace:
           at: ~/
       - run:
