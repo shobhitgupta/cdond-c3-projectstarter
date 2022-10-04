@@ -16,7 +16,7 @@ commands:
             aws s3 rb s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --force
 
   revert-migrations:
-    description: Revert the last migration if successfully run in the current workflow 
+    description: Revert the last migration if successfully run in the current workflow.
     steps:
       - run:
           name: Revert migrations
@@ -132,8 +132,8 @@ jobs:
             cd backend
             npm install
             npm audit fix --audit-level=critical --force
+            npm audit fix --force
             npm audit --audit-level=critical
-    
     
     
 
@@ -185,7 +185,9 @@ jobs:
       - image: python:3.7-alpine3.11
     steps:
       - checkout
+
       - run:
+
           name: Install dependencies
           command: |
             sleep 60
@@ -248,13 +250,9 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            sudo apt update && sudo apt upgrade
-            sudo apt-get install python python-pip 
-            sudo pip install awscli 
-            python -m pip install --user ansible
-            npm install
-            sudo apt-get install curl
-            sudo apt-get install tar gzip
+            sudo apt-get -y -qq update
+            sudo apt-get -qq install awscli
+            sudo apt install tar gzip curl
       - attach_workspace:
           at: ~/
       - run:
@@ -328,15 +326,15 @@ jobs:
     steps:
       - checkout
       - run:
-         name: Install dependencies
-         command: |
-           apk add curl tar gzip
+          name: Install dependencies
+          command: |
+            apk add curl tar gzip
       - run:
           name: install aws cli
           command: |
-                apk add --no-cache aws-cli
+            apk add --no-cache aws-cli
       - run:
-          name: Run backend smoke test
+          name: Get backend url and backend smoke test
           command: |
             sleep 60
             export BACKEND_IP=$(aws ec2 describe-instances --query 'Reservations[*].Instances[*].PublicIpAddress' --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" --output text)
@@ -345,7 +343,7 @@ jobs:
             echo "API_URL=${API_URL}"
             if curl "http://{API_URL}/api/status" | grep "ok"
             then
-            return 1
+            return 0
             else
             return 1
             fi
@@ -359,9 +357,9 @@ jobs:
             else
             return 1
             fi
-#      - destroy-environment:
-#          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
-#      - revert-migrations
+      - destroy-environment:
+          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
+      - revert-migrations
   cloudfront-update:
     docker:
       - image: amazon/aws-cli
@@ -401,26 +399,26 @@ jobs:
               aws s3 rm "s3://udapeople-${OldWorkflowID}" --recursive
               aws cloudformation delete-stack --stack-name "udapeople-backend-${OldWorkflowID}"
               aws cloudformation delete-stack --stack-name "udapeople-frontend-${OldWorkflowID}"
-              fi
-#workflows:
-#  default:
-#    jobs:
-#      - build-frontend
-#      - build-backend
-#      # - test-frontend:
-#      #     requires: [ build-frontend ]
-#      # - test-backend:
-#      #     requires: [ build-backend ]
-#      # - scan-backend:
-#      #     requires: [ build-backend ]
-#      # - scan-frontend:
-#      #     requires: [ build-frontend ]
+            fi
+workflows:
+  default:
+    jobs:
+      - build-frontend
+      - build-backend
+      - test-frontend:
+          requires: [ build-frontend ]
+      - test-backend:
+          requires: [ build-backend ]
+      - scan-backend:
+          requires: [ build-backend ]
+      - scan-frontend:
+          requires: [ build-frontend ]
 #      - deploy-infrastructure:
-#          requires: [build-frontend,build-backend]
 #          filters:
 #            branches:
 #              only:
-#                - master
+#                -master
+#          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
 #      - configure-infrastructure:
 #          requires: [ deploy-infrastructure ]
 #      - run-migrations:
@@ -429,9 +427,9 @@ jobs:
 #          requires: [ run-migrations ]
 #      - deploy-backend:
 #                requires: [ run-migrations ]
-##      - smoke-test:
-##          requires: [deploy-backend, deploy-frontend]
-#      - cloudfront-update:
-#            requires: [ deploy-backend, deploy-frontend]
-#      - cleanup:
+#        - smoke-test:
+#          requires: [deploy-backend, deploy-frontend]
+#        - cloudfront-update:
+#               requires: [ smoke-test ]
+#        - cleanup:
 #              requires: [ cloudfront-update ]
